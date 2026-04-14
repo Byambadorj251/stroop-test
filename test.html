@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stroop Test</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f3f4f6;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 20px;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 420px;
+      background: #ffffff;
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+      text-align: center;
+    }
+
+    .title {
+      font-size: 26px;
+      font-weight: 700;
+      margin-bottom: 18px;
+      color: #111827;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .card {
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      padding: 12px;
+    }
+
+    .card-label {
+      font-size: 14px;
+      color: #6b7280;
+      margin-bottom: 6px;
+    }
+
+    .card-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #111827;
+    }
+
+    .word {
+      font-size: 54px;
+      font-weight: 700;
+      margin: 36px 0 28px;
+      min-height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+      margin-top: 12px;
+    }
+
+    .choice {
+      border: none;
+      border-radius: 999px;
+      padding: 18px 14px;
+      font-size: 17px;
+      font-weight: 700;
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+      transition: transform 0.08s ease;
+    }
+
+    .choice:active {
+      transform: scale(0.97);
+    }
+
+    .controls {
+      margin-top: 18px;
+    }
+
+    .controls button {
+      border: none;
+      border-radius: 12px;
+      padding: 12px 18px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      background: #111827;
+      color: white;
+    }
+
+    .hint,
+    .result,
+    .save-status {
+      margin-top: 16px;
+      padding: 14px;
+      border-radius: 12px;
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      color: #475569;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .result {
+      color: #111827;
+      font-weight: 700;
+    }
+
+    .save-status {
+      font-size: 13px;
+    }
+
+    @media (max-width: 480px) {
+      .word {
+        font-size: 46px;
+      }
+
+      .choice {
+        font-size: 15px;
+        padding: 16px 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="title">Stroop Test</div>
+
+    <div class="stats">
+      <div class="card">
+        <div class="card-label">Time Left</div>
+        <div class="card-value" id="time">60</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Score</div>
+        <div class="card-value" id="score">0</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Accuracy</div>
+        <div class="card-value" id="accuracy">0%</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Answered</div>
+        <div class="card-value" id="answered">0/20</div>
+      </div>
+    </div>
+
+    <div class="word" id="word">Press Start</div>
+
+    <div class="buttons" id="buttons"></div>
+
+    <div class="controls">
+      <button id="startBtn">Start</button>
+    </div>
+
+    <div class="hint">
+      Click the button that matches the <b>COLOR</b> of the word, not the word itself.
+    </div>
+
+    <div class="hint">
+      Average reaction time: <b id="avgTime">0 ms</b>
+    </div>
+
+    <div class="result" id="resultText">Result will appear here.</div>
+    <div class="save-status" id="saveStatus">Data not sent yet.</div>
+  </div>
+
+  <script>
+    const COLORS = [
+      { name: "RED", value: "red", textColor: "white" },
+      { name: "BLUE", value: "blue", textColor: "white" },
+      { name: "GREEN", value: "green", textColor: "white" },
+      { name: "YELLOW", value: "goldenrod", textColor: "black" },
+      { name: "BLACK", value: "black", textColor: "white" }
+    ];
+
+    const GAME_TIME = 60;
+    const MAX_QUESTIONS = 20;
+
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwHTAMLDUgYB0r7aSixBbdUlWRFxtNOhPuB0bcLerui54HnQ56PM2WftAN_XzyYh01VUw/exec";
+
+    const timeEl = document.getElementById("time");
+    const scoreEl = document.getElementById("score");
+    const accuracyEl = document.getElementById("accuracy");
+    const answeredEl = document.getElementById("answered");
+    const wordEl = document.getElementById("word");
+    const buttonsEl = document.getElementById("buttons");
+    const startBtn = document.getElementById("startBtn");
+    const avgTimeEl = document.getElementById("avgTime");
+    const resultText = document.getElementById("resultText");
+    const saveStatus = document.getElementById("saveStatus");
+
+    let score = 0;
+    let total = 0;
+    let timeLeft = GAME_TIME;
+    let timer = null;
+    let currentAnswer = null;
+    let startTime = null;
+    let reactionTimes = [];
+    let isRunning = false;
+
+    function getParticipantId() {
+      let participantId = localStorage.getItem("participantId");
+      if (!participantId) {
+        participantId = crypto.randomUUID();
+        localStorage.setItem("participantId", participantId);
+      }
+      return participantId;
+    }
+
+    async function saveResult({ participantId, score, accuracy, avgRt, total, reason }) {
+      const formData = new FormData();
+      formData.append("participantId", participantId);
+      formData.append("score", String(score));
+      formData.append("accuracy", String(accuracy));
+      formData.append("avgRt", String(avgRt));
+      formData.append("total", String(total));
+      formData.append("reason", reason);
+
+      await fetch(WEB_APP_URL, {
+        method: "POST",
+        body: formData,
+        mode: "no-cors"
+      });
+    }
+
+    function createButtons() {
+      buttonsEl.innerHTML = "";
+
+      COLORS.forEach((color) => {
+        const btn = document.createElement("button");
+        btn.className = "choice";
+        btn.textContent = color.name;
+        btn.style.background = color.value;
+        btn.style.color = color.textColor;
+        btn.addEventListener("click", () => handleAnswer(color.name));
+        buttonsEl.appendChild(btn);
+      });
+    }
+
+    function nextQuestion() {
+      const wordItem = COLORS[Math.floor(Math.random() * COLORS.length)];
+      const colorItem = COLORS[Math.floor(Math.random() * COLORS.length)];
+
+      wordEl.textContent = wordItem.name;
+      wordEl.style.color = colorItem.value;
+
+      currentAnswer = colorItem.name;
+      startTime = performance.now();
+    }
+
+    function getAverageReactionTime() {
+      if (reactionTimes.length === 0) return 0;
+      const sum = reactionTimes.reduce((a, b) => a + b, 0);
+      return Math.round(sum / reactionTimes.length);
+    }
+
+    function updateStats() {
+      scoreEl.textContent = score;
+      accuracyEl.textContent = total > 0 ? Math.round((score / total) * 100) + "%" : "0%";
+      answeredEl.textContent = `${total}/${MAX_QUESTIONS}`;
+      avgTimeEl.textContent = `${getAverageReactionTime()} ms`;
+    }
+
+    async function finishGame(reason) {
+      if (!isRunning) return;
+
+      clearInterval(timer);
+      isRunning = false;
+      currentAnswer = null;
+
+      wordEl.textContent = "Finished!";
+      wordEl.style.color = "#111827";
+
+      const avg = getAverageReactionTime();
+      const participantId = getParticipantId();
+
+      resultText.textContent =
+        `Done: ${total}/${MAX_QUESTIONS} | Score: ${score} | Accuracy: ${accuracyEl.textContent} | Avg RT: ${avg} ms | ${reason}`;
+
+      startBtn.textContent = "Restart";
+      saveStatus.textContent = "Saving result...";
+
+      try {
+        await saveResult({
+          participantId,
+          score,
+          accuracy: accuracyEl.textContent,
+          avgRt: avg,
+          total,
+          reason
+        });
+
+        saveStatus.textContent = `Saved successfully. Participant ID: ${participantId}`;
+      } catch (error) {
+        console.error(error);
+        saveStatus.textContent = "Could not save result. Please try again.";
+      }
+    }
+
+    function handleAnswer(selected) {
+      if (!isRunning || !currentAnswer) return;
+
+      const endTime = performance.now();
+      const reaction = Math.round(endTime - startTime);
+      reactionTimes.push(reaction);
+
+      total++;
+
+      if (selected === currentAnswer) {
+        score++;
+      }
+
+      updateStats();
+
+      if (total >= MAX_QUESTIONS) {
+        finishGame("20 answers reached");
+        return;
+      }
+
+      nextQuestion();
+    }
+
+    function startGame() {
+      clearInterval(timer);
+
+      score = 0;
+      total = 0;
+      timeLeft = GAME_TIME;
+      reactionTimes = [];
+      currentAnswer = null;
+      startTime = null;
+      isRunning = true;
+
+      timeEl.textContent = timeLeft;
+      resultText.textContent = "Result will appear here.";
+      saveStatus.textContent = "Data not sent yet.";
+      startBtn.textContent = "Restart";
+
+      updateStats();
+      nextQuestion();
+
+      timer = setInterval(() => {
+        timeLeft--;
+        timeEl.textContent = timeLeft;
+
+        if (timeLeft <= 0) {
+          finishGame("Time is up");
+        }
+      }, 1000);
+    }
+
+    createButtons();
+    startBtn.addEventListener("click", startGame);
+  </script>
+</body>
+</html>
